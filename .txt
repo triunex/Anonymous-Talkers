@@ -1,0 +1,20 @@
+ Phase 2 – Premium User Experience:
+🛡️ Priority Matching – Faster matching for premium users
+
+👁️ Last Seen / Active Status – Anonymous way to show activity
+
+✨ Verified Badge – Visual trust signal in bios
+
+📌 Phase 3 – Monetization:
+🧾 Subscription Tiers (Weekly/Monthly with Razorpay)
+
+📣 Ad Slots with Controls – Admin dashboard to push ads
+
+💸 In-Bot Purchase Items – Boost, Reconnect, etc.
+
+📌 Phase 4 – Admin Control & Optimization:
+📊 Advanced Analytics Dashboard
+
+🧪 A/B Testing Engine
+
+🔧 Dynamic Premium System Enhancements
