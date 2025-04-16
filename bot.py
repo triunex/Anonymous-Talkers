@@ -5,7 +5,46 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.context import FSMContext
 from datetime import datetime
+
+class DB:
+    def __init__(self, db_file="database.json"):
+        self.db_file = db_file
+        self.data = self._load_db()
+
+    def _load_db(self):
+        try:
+            with open(self.db_file, "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+
+    def _save_db(self):
+        with open(self.db_file, "w") as f:
+            json.dump(self.data, f)
+
+    def set_user_interests(self, user_id, interests):
+        self.data[str(user_id)] = {"interests": interests}
+        self._save_db()
+
+    def get_user_interests(self, user_id):
+        """Retrieve the interests of a user."""
+        return self.data.get(str(user_id), {}).get("interests", [])
+
+    def get_waiting_users(self):
+        """Retrieve the list of waiting users."""
+        return self.data.get("waiting_users", [])
+
+    def remove_from_queue(self, user_id):
+        """Remove a user from the waiting queue."""
+        queue = self.data.get("waiting_users", [])
+        if user_id in queue:
+            queue.remove(user_id)
+            self.data["waiting_users"] = queue
+            self._save_db()
+
+db = DB()
 
 BOT_TOKEN = "7678845859:AAF-U2emUFUVztVgkcI-_vRlMA6FXJXCGdU"
 bot = Bot(token=BOT_TOKEN)
@@ -149,9 +188,19 @@ async def set_gender(message: Message):
     ])
     await message.answer("🦮 Please select your gender:", reply_markup=keyboard)
 
-@dp.message(Command("setinterests"))
-async def set_interests(message: Message):
-    await message.answer("🏷 Send your interests separated by commas (e.g., movies, coding, sports):")
+@dp.message_handler(commands=["set_interests"])
+async def set_interests(message: types.Message, state: FSMContext):
+    await message.answer("🎯 Send your interests separated by commas (e.g. `movies, cricket, anime`):")
+    await state.set_state("awaiting_interests")
+
+@dp.message_handler(state="awaiting_interests")
+async def save_interests(message: types.Message, state: FSMContext):
+    interests_raw = message.text.lower()
+    interests = [i.strip() for i in interests_raw.split(',') if i.strip()]
+    user_id = message.from_user.id
+    db.set_user_interests(user_id, interests)  # You'll implement this in DB
+    await message.answer(f"✅ Interests saved: {', '.join(interests)}")
+    await state.finish()
 
 @dp.message(Command("setlanguage"))
 async def set_language(message: Message):
@@ -334,6 +383,19 @@ async def handle_all_messages(message: Message):
 
 def is_waiting(user_id):
     return user_id in waiting_users
+
+def find_match(user_id):
+    user_interests = db.get_user_interests(user_id)
+    queue = db.get_waiting_users()
+
+    for candidate in queue:
+        if candidate == user_id:
+            continue
+        candidate_interests = db.get_user_interests(candidate)
+        if set(user_interests) & set(candidate_interests):  # if common
+            db.remove_from_queue(candidate)
+            return candidate
+    return None
 
 async def find_partner(uid, pref):
     if is_waiting(uid):
